@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "DeviceSettings": {
+      "title": "Device Settings",
+      "description": "Control parameters for the AquaControl Pro device",
+      "type": "object",
+      "properties": {
+        "targetTemp": { "type": "number", "description": "Target temperature in Celsius" },
+        "fanSpeed": { "type": "string", "enum": ["Off", "Low", "Med", "High"], "description": "Active fan speed" },
+        "turboBoost": { "type": "boolean", "description": "Whether turbo boost is enabled" },
+        "lastUpdated": { "type": "string", "format": "date-time", "description": "Last time settings were modified" }
+      },
+      "required": ["targetTemp", "fanSpeed", "turboBoost"]
+    },
+    "DeviceTelemetry": {
+      "title": "Device Telemetry",
+      "description": "Real-time sensor data from the device",
+      "type": "object",
+      "properties": {
+        "currentTemp": { "type": "number", "description": "Current ambient temperature" },
+        "humidity": { "type": "number", "description": "Current humidity percentage" },
+        "waterLevel": { "type": "number", "description": "Current water level percentage" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time of reading" }
+      },
+      "required": ["currentTemp", "humidity", "waterLevel"]
+    }
+  },
+  "firestore": {
+    "/devices/{deviceId}/settings": {
+      "schema": "DeviceSettings",
+      "description": "Settings for a specific device"
+    },
+    "/devices/{deviceId}/telemetry": {
+      "schema": "DeviceTelemetry",
+      "description": "Telemetry data for a specific device"
+    }
+  }
+}

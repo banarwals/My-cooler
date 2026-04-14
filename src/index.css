@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Space Grotesk", sans-serif;
+
+  --color-background: #0a0f13;
+  --color-surface: #0a0f13;
+  --color-surface-container-low: #0e1418;
+  --color-surface-container: #141a1f;
+  --color-surface-container-high: #1a2026;
+  --color-surface-container-highest: #1f272c;
+  --color-surface-variant: #1f272c;
+  
+  --color-primary: #81ecff;
+  --color-primary-dim: #00d4ec;
+  --color-primary-container: #00e3fd;
+  --color-on-primary-container: #004d57;
+  
+  --color-secondary: #6e9bff;
+  --color-secondary-container: #0058ca;
+  
+  --color-tertiary: #b8ffbb;
+  --color-tertiary-fixed: #5cfd80;
+  --color-tertiary-container: rgba(92, 253, 128, 0.1);
+  
+  --color-error: #ff716c;
+  --color-on-surface: #f3f7fd;
+  --color-on-surface-variant: #a7abb1;
+  --color-outline-variant: rgba(67, 72, 77, 0.3);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-surface-variant/30 backdrop-blur-xl border border-outline-variant;
+  }
+  
+  .glow-primary {
+    filter: drop-shadow(0 0 10px rgba(129, 236, 255, 0.3));
+  }
+  
+  .text-glow-primary {
+    text-shadow: 0 0 15px rgba(129, 236, 255, 0.5);
+  }
+}

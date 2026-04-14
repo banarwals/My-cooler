@@ -1,0 +1,86 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: devices
+// Document ID: {deviceId}
+// Sub-collection: settings
+// Fields:
+//   - targetTemp: number (required, 16-32)
+//   - fanSpeed: string (required, ['Off', 'Low', 'Med', 'High'])
+//   - turboBoost: bool (required)
+//   - lastUpdated: timestamp (required)
+//
+// Sub-collection: telemetry
+// Fields:
+//   - currentTemp: number (required)
+//   - humidity: number (required)
+//   - waterLevel: number (required)
+//   - timestamp: timestamp (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "banarwals@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['targetTemp', 'fanSpeed', 'turboBoost', 'lastUpdated']) &&
+             data.targetTemp is number && data.targetTemp >= 16 && data.targetTemp <= 32 &&
+             data.fanSpeed in ['Off', 'Low', 'Med', 'High'] &&
+             data.turboBoost is bool &&
+             data.lastUpdated is timestamp;
+    }
+
+    function isValidTelemetry(data) {
+      return data.keys().hasAll(['currentTemp', 'humidity', 'waterLevel', 'timestamp']) &&
+             data.currentTemp is number &&
+             data.humidity is number &&
+             data.waterLevel is number &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /devices/{deviceId} {
+      // Allow read if authenticated (for demo purposes, usually scoped to owner)
+      allow read: if isAuthenticated();
+      
+      match /settings/{settingId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && isValidSettings(request.resource.data);
+      }
+
+      match /telemetry/{telemetryId} {
+        allow read: if isAuthenticated();
+        // Telemetry is usually written by the device (ESP)
+        // For this demo, we allow authenticated writes
+        allow write: if isAuthenticated() && isValidTelemetry(request.resource.data);
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
