@@ -18,6 +18,7 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include <ArduinoJson.h>
+#include <DHT.h>
 
 // --- Configuration ---
 #define WIFI_SSID "YOUR_WIFI_SSID"
@@ -41,6 +42,10 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+#define DHTPIN 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
 BLECharacteristic *pSettingsCharacteristic;
 BLECharacteristic *pTelemetryCharacteristic;
 bool deviceConnected = false;
@@ -60,6 +65,7 @@ bool autoFill = true;
 #define FAN_RELAY_PIN 18    // AC Fan Relay
 #define PUMP_RELAY_PIN 19   // AC Pump Relay
 #define WATER_LEVEL_PIN 34  // Analog Sensor
+// DHTPIN is defined above with Global Objects
 
 // --- BLE Callbacks ---
 class MyServerCallbacks: public BLEServerCallbacks {
@@ -98,6 +104,7 @@ class SettingsCallbacks: public BLECharacteristicCallbacks {
 
 void setup() {
   Serial.begin(115200);
+  dht.begin();
 
   // Hardware Setup
   pinMode(FAN_RELAY_PIN, OUTPUT);
@@ -151,8 +158,14 @@ unsigned long lastUpdate = 0;
 
 void loop() {
   // 1. Read Sensors
-  // currentTemp = dht.readTemperature();
-  // humidity = dht.readHumidity();
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  if (!isnan(h) && !isnan(t)) {
+    humidity = (int)h;
+    currentTemp = t;
+  }
+
   int rawLevel = analogRead(WATER_LEVEL_PIN);
   waterLevel = map(rawLevel, 0, 4095, 0, 100);
 
