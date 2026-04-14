@@ -53,6 +53,13 @@ int waterLevel = 85;
 float targetTemp = 22.0;
 String fanSpeed = "Med";
 bool turboBoost = false;
+bool pumpStatus = false;
+bool autoFill = true;
+
+// --- Hardware Pins ---
+#define FAN_RELAY_PIN 18    // AC Fan Relay
+#define PUMP_RELAY_PIN 19   // AC Pump Relay
+#define WATER_LEVEL_PIN 34  // Analog Sensor
 
 // --- BLE Callbacks ---
 class MyServerCallbacks: public BLEServerCallbacks {
@@ -76,13 +83,14 @@ class SettingsCallbacks: public BLECharacteristicCallbacks {
         Serial.println(value);
         
         // Parse JSON from Web App
-        StaticJsonDocument<200> doc;
+        StaticJsonDocument<256> doc;
         DeserializationError error = deserializeJson(doc, value);
         if (!error) {
-          targetTemp = doc["targetTemp"];
-          fanSpeed = doc["fanSpeed"].as<String>();
-          turboBoost = doc["turboBoost"];
-          // Apply settings to hardware here
+          if (doc.containsKey("targetTemp")) targetTemp = doc["targetTemp"];
+          if (doc.containsKey("fanSpeed")) fanSpeed = doc["fanSpeed"].as<String>();
+          if (doc.containsKey("turboBoost")) turboBoost = doc["turboBoost"];
+          if (doc.containsKey("pumpStatus")) pumpStatus = doc["pumpStatus"];
+          if (doc.containsKey("autoFill")) autoFill = doc["autoFill"];
         }
       }
     }
@@ -90,6 +98,12 @@ class SettingsCallbacks: public BLECharacteristicCallbacks {
 
 void setup() {
   Serial.begin(115200);
+
+  // Hardware Setup
+  pinMode(FAN_RELAY_PIN, OUTPUT);
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+  digitalWrite(FAN_RELAY_PIN, HIGH); // Relays are active LOW usually
+  digitalWrite(PUMP_RELAY_PIN, HIGH);
 
   // 1. WiFi Setup
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -136,9 +150,24 @@ void setup() {
 unsigned long lastUpdate = 0;
 
 void loop() {
-  // Simulate sensor reading
-  currentTemp += (random(-10, 11) / 100.0);
+  // 1. Read Sensors
+  // currentTemp = dht.readTemperature();
+  // humidity = dht.readHumidity();
+  int rawLevel = analogRead(WATER_LEVEL_PIN);
+  waterLevel = map(rawLevel, 0, 4095, 0, 100);
+
+  // 2. Auto-Fill Logic
+  if (autoFill) {
+    if (waterLevel < 20) pumpStatus = true;   // Start filling if low
+    if (waterLevel >= 95) pumpStatus = false; // Stop when full
+  }
+
+  // 3. Apply Hardware States (Active LOW Relays)
+  digitalWrite(PUMP_RELAY_PIN, pumpStatus ? LOW : HIGH);
   
+  if (fanSpeed == "Off") digitalWrite(FAN_RELAY_PIN, HIGH);
+  else digitalWrite(FAN_RELAY_PIN, LOW); // Simplified for Relay
+
   // Update every 5 seconds
   if (millis() - lastUpdate > 5000) {
     lastUpdate = millis();

@@ -878,7 +878,13 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [telemetry, setTelemetry] = useState({ currentTemp: 27.5, humidity: 62, waterLevel: 85 });
-  const [settings, setSettings] = useState({ targetTemp: 22, fanSpeed: "Med", turboBoost: false });
+  const [settings, setSettings] = useState({ 
+    targetTemp: 22, 
+    fanSpeed: "Med", 
+    turboBoost: false,
+    pumpStatus: false,
+    autoFill: true 
+  });
   const [btStatus, setBtStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [btDevice, setBtDevice] = useState<BluetoothDevice | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1143,6 +1149,62 @@ export default function App() {
                 </div>
 
                 <div className="col-span-12 lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
+                  <section className="bg-surface-container-high rounded-[2.5rem] p-6 lg:p-8">
+                    <h3 className="text-sm font-headline font-bold mb-6 lg:mb-8 flex items-center gap-3 uppercase tracking-[0.2em]">
+                      <Droplets className={`w-5 h-5 text-secondary ${settings.pumpStatus ? "animate-pulse" : ""}`} />
+                      Tank Management
+                    </h3>
+                    
+                    <div className="flex flex-col gap-6">
+                      <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl border border-white/5">
+                        <div>
+                          <div className="text-xs font-bold uppercase tracking-widest">Auto-Fill Mode</div>
+                          <div className="text-[10px] text-on-surface-variant mt-1">Automatic pump control</div>
+                        </div>
+                        <button 
+                          onClick={() => updateSettings({ autoFill: !settings.autoFill })}
+                          className={`w-11 h-6 rounded-full relative transition-colors ${settings.autoFill ? "bg-secondary" : "bg-surface-variant"}`}
+                        >
+                          <motion.div 
+                            animate={{ x: settings.autoFill ? 20 : 4 }}
+                            className="absolute top-1 w-4 h-4 rounded-full bg-white" 
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl border border-white/5">
+                        <div>
+                          <div className="text-xs font-bold uppercase tracking-widest">Manual Pump</div>
+                          <div className="text-[10px] text-on-surface-variant mt-1">{settings.pumpStatus ? "Pump is Running" : "Pump is Idle"}</div>
+                        </div>
+                        <button 
+                          disabled={settings.autoFill}
+                          onClick={() => updateSettings({ pumpStatus: !settings.pumpStatus })}
+                          className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            settings.pumpStatus 
+                              ? "bg-secondary text-on-secondary-container" 
+                              : "bg-surface-variant text-on-surface-variant"
+                          } ${settings.autoFill ? "opacity-30 cursor-not-allowed" : ""}`}
+                        >
+                          {settings.pumpStatus ? "Stop" : "Start"}
+                        </button>
+                      </div>
+
+                      <div className="bg-surface-container-lowest/40 rounded-3xl p-6 border border-white/5">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Current Level</span>
+                          <span className={`text-xs font-bold ${telemetry.waterLevel < 20 ? "text-error" : "text-secondary"}`}>{telemetry.waterLevel}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+                          <motion.div 
+                            animate={{ width: `${telemetry.waterLevel}%` }}
+                            className={`h-full ${telemetry.waterLevel < 20 ? "bg-error" : "bg-secondary"}`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
                   <FanDynamics 
                     speed={settings.fanSpeed} 
                     setSpeed={(s: string) => updateSettings({ fanSpeed: s })}
