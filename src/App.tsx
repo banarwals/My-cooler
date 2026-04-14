@@ -110,7 +110,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 // --- Components ---
 
-const AuthModal = ({ isOpen, onClose, onGoogleLogin, onEmailLogin, onEmailSignup }: any) => {
+const LoginGate = ({ onGoogleLogin, onEmailLogin, onEmailSignup, onContinueOffline }: any) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -128,7 +128,6 @@ const AuthModal = ({ isOpen, onClose, onGoogleLogin, onEmailLogin, onEmailSignup
       } else {
         await onEmailSignup(email, password, name);
       }
-      onClose();
     } catch (err: any) {
       setError(err.message || "Authentication failed");
     } finally {
@@ -136,100 +135,173 @@ const AuthModal = ({ isOpen, onClose, onGoogleLogin, onEmailLogin, onEmailSignup
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-surface-container rounded-[2.5rem] p-10 w-full max-w-md border border-white/5 shadow-2xl relative"
-      >
-        <button onClick={onClose} className="absolute top-8 right-8 text-on-surface-variant hover:text-on-surface">
-          <X className="w-6 h-6" />
-        </button>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0f13] overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
+      </div>
 
-        <h3 className="text-3xl font-headline font-black mb-2 uppercase tracking-tight">
-          {isLogin ? "Welcome Back" : "Create Account"}
-        </h3>
-        <p className="text-on-surface-variant text-sm mb-8">
-          {isLogin ? "Access your system intelligence dashboard." : "Join the AquaControl Pro network."}
-        </p>
+      <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 items-center gap-20 p-8">
+        <motion.div 
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="hidden lg:flex flex-col gap-8"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-[0_0_30px_rgba(129,236,255,0.2)]">
+              <Activity className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-4xl font-black font-headline tracking-tighter uppercase text-primary">
+              AquaControl Pro
+            </h1>
+          </div>
+          <h2 className="text-6xl font-black font-headline tracking-tighter uppercase leading-[0.9]">
+            System <br /> <span className="text-on-surface-variant">Intelligence</span> <br /> Dashboard
+          </h2>
+          <p className="text-on-surface-variant text-lg max-w-md leading-relaxed">
+            The next generation of laboratory environment control. Real-time telemetry, automated tank management, and direct hardware link.
+          </p>
+          <div className="flex items-center gap-10 mt-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-2xl font-black font-headline text-primary">24ms</span>
+              <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Latency</span>
+            </div>
+            <div className="w-px h-10 bg-white/10" />
+            <div className="flex flex-col gap-1">
+              <span className="text-2xl font-black font-headline text-secondary">100%</span>
+              <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Reliability</span>
+            </div>
+            <div className="w-px h-10 bg-white/10" />
+            <div className="flex flex-col gap-1">
+              <span className="text-2xl font-black font-headline text-tertiary-fixed">AES-256</span>
+              <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Encrypted</span>
+            </div>
+          </div>
+        </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-surface-container rounded-[3rem] p-12 border border-white/5 shadow-2xl relative backdrop-blur-xl"
+        >
+          <div className="lg:hidden mb-10 flex items-center gap-3">
+            <Activity className="w-6 h-6 text-primary" />
+            <h1 className="text-xl font-black font-headline tracking-tighter uppercase text-primary">
+              AquaControl Pro
+            </h1>
+          </div>
+
+          <h3 className="text-3xl font-headline font-black mb-2 uppercase tracking-tight">
+            {isLogin ? "Welcome Back" : "Create Account"}
+          </h3>
+          <p className="text-on-surface-variant text-sm mb-8">
+            {isLogin ? "Access your system intelligence dashboard." : "Join the AquaControl Pro network."}
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
+                <input 
+                  type="text" 
+                  placeholder="Full Name" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="w-full bg-surface-container-low border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-headline outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+            )}
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
               <input 
-                type="text" 
-                placeholder="Full Name" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                type="email" 
+                placeholder="Email Address" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full bg-surface-container-low border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-headline outline-none focus:border-primary/50 transition-all"
               />
             </div>
-          )}
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
-            <input 
-              type="email" 
-              placeholder="Email Address" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full bg-surface-container-low border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-headline outline-none focus:border-primary/50 transition-all"
-            />
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
+              <input 
+                type="password" 
+                placeholder="Password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full bg-surface-container-low border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-headline outline-none focus:border-primary/50 transition-all"
+              />
+            </div>
+
+            {error && <div className="text-error text-[10px] font-black uppercase tracking-widest bg-error/10 p-3 rounded-xl border border-error/20">{error}</div>}
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-primary text-on-primary-container py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-[0_0_20px_rgba(0,227,253,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {loading ? "Processing..." : isLogin ? "Sign In" : "Register"}
+            </button>
+          </form>
+
+          <div className="mt-8 flex items-center gap-4">
+            <div className="h-px flex-1 bg-white/5" />
+            <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Or Continue With</span>
+            <div className="h-px flex-1 bg-white/5" />
           </div>
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
-            <input 
-              type="password" 
-              placeholder="Password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-surface-container-low border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-headline outline-none focus:border-primary/50 transition-all"
-            />
+
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            <button 
+              onClick={onGoogleLogin}
+              className="bg-surface-container-high hover:bg-surface-container-highest py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-white/5 group"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
+            </button>
+            <button 
+              onClick={onContinueOffline}
+              className="bg-surface-container-high hover:bg-surface-container-highest py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-white/5 group"
+            >
+              <Bluetooth className="w-5 h-5 text-secondary" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Offline</span>
+            </button>
           </div>
 
-          {error && <div className="text-error text-xs font-bold uppercase tracking-widest">{error}</div>}
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-primary text-on-primary-container py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-[0_0_20px_rgba(0,227,253,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            {loading ? "Processing..." : isLogin ? "Sign In" : "Register"}
-          </button>
-        </form>
-
-        <div className="mt-8 flex items-center gap-4">
-          <div className="h-px flex-1 bg-white/5" />
-          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Or Continue With</span>
-          <div className="h-px flex-1 bg-white/5" />
-        </div>
-
-        <button 
-          onClick={onGoogleLogin}
-          className="w-full mt-6 bg-surface-container-high hover:bg-surface-container-highest py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-white/5"
-        >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-          <span className="text-xs font-bold uppercase tracking-widest">Google Account</span>
-        </button>
-
-        <div className="mt-8 text-center">
-          <button 
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest hover:text-primary transition-colors"
-          >
-            {isLogin ? "Don't have an account? Register" : "Already have an account? Sign In"}
-          </button>
-        </div>
-      </motion.div>
+          <div className="mt-10 text-center">
+            <button 
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest hover:text-primary transition-colors"
+            >
+              {isLogin ? "Don't have an account? Register" : "Already have an account? Sign In"}
+            </button>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
+
+const LoadingScreen = () => (
+  <div className="fixed inset-0 z-[300] bg-[#0a0f13] flex flex-col items-center justify-center gap-8">
+    <div className="relative">
+      <motion.div 
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+        className="w-24 h-24 rounded-full border-2 border-primary/10 border-t-primary shadow-[0_0_30px_rgba(129,236,255,0.2)]"
+      />
+      <Activity className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 text-primary" />
+    </div>
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.4em] text-primary animate-pulse">Initializing System</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Security Handshake...</span>
+    </div>
+  </div>
+);
 
 const Sidebar = ({ 
   user, 
@@ -875,7 +947,7 @@ const SettingsView = ({ user, onLogout }: any) => {
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [telemetry, setTelemetry] = useState({ currentTemp: 27.5, humidity: 62, waterLevel: 85 });
   const [settings, setSettings] = useState({ 
@@ -902,7 +974,6 @@ export default function App() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      setIsAuthModalOpen(false);
     } catch (err) {
       console.error("Google login failed", err);
     }
@@ -919,7 +990,10 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => {
+    signOut(auth);
+    setIsOfflineMode(false);
+  };
 
   // --- Firestore Real-time Sync ---
   useEffect(() => {
@@ -1027,22 +1101,27 @@ export default function App() {
     setBtDevice(null);
   };
 
+  if (!isAuthReady) return <LoadingScreen />;
+
+  if (!user && !isOfflineMode) {
+    return (
+      <LoginGate 
+        onGoogleLogin={handleGoogleLogin}
+        onEmailLogin={handleEmailLogin}
+        onEmailSignup={handleEmailSignup}
+        onContinueOffline={() => setIsOfflineMode(true)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-on-surface selection:bg-primary/30">
       <Sidebar 
         user={user} 
-        onLogin={() => setIsAuthModalOpen(true)} 
+        onLogin={() => setIsOfflineMode(false)} 
         onLogout={handleLogout} 
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-      />
-
-      <AuthModal 
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onGoogleLogin={handleGoogleLogin}
-        onEmailLogin={handleEmailLogin}
-        onEmailSignup={handleEmailSignup}
       />
       
       <main className="lg:ml-64 p-6 lg:p-10 pt-24 lg:pt-10 min-h-screen max-w-[1600px] mx-auto pb-24 lg:pb-10">
