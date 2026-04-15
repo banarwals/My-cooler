@@ -969,6 +969,7 @@ export default function App() {
   });
   const [btStatus, setBtStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [btDevice, setBtDevice] = useState<BluetoothDevice | null>(null);
+  const [btSettingsChar, setBtSettingsChar] = useState<BluetoothRemoteGATTCharacteristic | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // --- Firebase Auth ---
@@ -1027,6 +1028,12 @@ export default function App() {
     const unsubTelemetry = onSnapshot(doc(db, "devices", deviceId, "telemetry", "latest"), (snap) => {
       if (snap.exists()) {
         setTelemetry(snap.data() as any);
+      } else {
+        // Initialize telemetry if it doesn't exist
+        setDoc(doc(db, "devices", deviceId, "telemetry", "latest"), {
+          ...telemetry,
+          timestamp: serverTimestamp()
+        });
       }
     }, (err) => handleFirestoreError(err, OperationType.GET, `devices/${deviceId}/telemetry/latest`));
 
@@ -1051,9 +1058,15 @@ export default function App() {
     setSettings(updated);
 
     // If Bluetooth connected, send via BT
-    if (btStatus === "connected") {
-      // Logic to send via BT characteristic
-      console.log("Sending settings via Bluetooth:", updated);
+    if (btStatus === "connected" && btSettingsChar) {
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify(updated));
+        await btSettingsChar.writeValue(data);
+        console.log("Sent settings via Bluetooth");
+      } catch (err) {
+        console.error("Bluetooth write failed", err);
+      }
     }
 
     // If Online, sync to Firestore
@@ -1073,6 +1086,7 @@ export default function App() {
   // --- Bluetooth Logic ---
   const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   const SETTINGS_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+  const TELEMETRY_CHAR_UUID = "cba1d466-344c-4be3-ab3f-189f80dd7518";
 
   const connectBluetooth = async () => {
     if (!navigator.bluetooth) {
@@ -1096,8 +1110,29 @@ export default function App() {
 
       const server = await device.gatt?.connect();
       const service = await server?.getPrimaryService(SERVICE_UUID);
-      const characteristic = await service?.getCharacteristic(SETTINGS_CHAR_UUID);
       
+      // Settings Characteristic
+      const settingsChar = await service?.getCharacteristic(SETTINGS_CHAR_UUID);
+      if (settingsChar) setBtSettingsChar(settingsChar);
+      
+      // Telemetry Characteristic
+      const telemetryChar = await service?.getCharacteristic(TELEMETRY_CHAR_UUID);
+      await telemetryChar?.startNotifications();
+      telemetryChar?.addEventListener('characteristicvaluechanged', (event: any) => {
+        const value = new TextDecoder().decode(event.target.value);
+        try {
+          const data = JSON.parse(value);
+          // Map short keys from ESP to full keys in App
+          setTelemetry({
+            currentTemp: data.temp || telemetry.currentTemp,
+            humidity: data.hum || telemetry.humidity,
+            waterLevel: data.water || telemetry.waterLevel
+          });
+        } catch (e) {
+          console.error("Failed to parse telemetry", e);
+        }
+      });
+
       console.log("Connected to ESP32 via Bluetooth");
       setBtStatus("connected");
       
