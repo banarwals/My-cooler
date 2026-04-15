@@ -65,6 +65,9 @@ bool autoFill = true;
 #define FAN_RELAY_PIN 18    // AC Fan Relay
 #define PUMP_RELAY_PIN 19   // AC Pump Relay
 #define WATER_LEVEL_PIN 34  // Analog Sensor
+#define RGB_RED_PIN 25      // RGB LED Red
+#define RGB_GREEN_PIN 26    // RGB LED Green
+#define RGB_BLUE_PIN 27     // RGB LED Blue
 // DHTPIN is defined above with Global Objects
 
 // --- BLE Callbacks ---
@@ -72,11 +75,27 @@ class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
       Serial.println("Bluetooth Client Connected");
+      // Turn Blue for connected
+      digitalWrite(RGB_RED_PIN, LOW);
+      digitalWrite(RGB_GREEN_PIN, LOW);
+      digitalWrite(RGB_BLUE_PIN, HIGH);
     };
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
       Serial.println("Bluetooth Client Disconnected");
+      
+      // Return to Green if WiFi is connected, otherwise Red
+      if (WiFi.status() == WL_CONNECTED) {
+        digitalWrite(RGB_RED_PIN, LOW);
+        digitalWrite(RGB_GREEN_PIN, HIGH);
+        digitalWrite(RGB_BLUE_PIN, LOW);
+      } else {
+        digitalWrite(RGB_RED_PIN, HIGH);
+        digitalWrite(RGB_GREEN_PIN, LOW);
+        digitalWrite(RGB_BLUE_PIN, LOW);
+      }
+      
       pServer->getAdvertising()->start(); // Restart advertising
     }
 };
@@ -109,6 +128,14 @@ void setup() {
   // Hardware Setup
   pinMode(FAN_RELAY_PIN, OUTPUT);
   pinMode(PUMP_RELAY_PIN, OUTPUT);
+  pinMode(RGB_RED_PIN, OUTPUT);
+  pinMode(RGB_GREEN_PIN, OUTPUT);
+  pinMode(RGB_BLUE_PIN, OUTPUT);
+
+  // Initial LED State (Red for disconnected)
+  digitalWrite(RGB_RED_PIN, HIGH);
+  digitalWrite(RGB_GREEN_PIN, LOW);
+  digitalWrite(RGB_BLUE_PIN, LOW);
   digitalWrite(FAN_RELAY_PIN, HIGH); // Relays are active LOW usually
   digitalWrite(PUMP_RELAY_PIN, HIGH);
 
@@ -119,6 +146,12 @@ void setup() {
     Serial.print(".");
     delay(300);
   }
+  Serial.println("\nWiFi Connected!");
+  
+  // Turn Green for WiFi Connected (Online Mode Ready)
+  digitalWrite(RGB_RED_PIN, LOW);
+  digitalWrite(RGB_GREEN_PIN, HIGH);
+  digitalWrite(RGB_BLUE_PIN, LOW);
   Serial.println();
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
@@ -219,10 +252,13 @@ void loop() {
 
     // Update BLE (Offline)
     if (deviceConnected) {
-      StaticJsonDocument<100> doc;
+      StaticJsonDocument<200> doc;
       doc["temp"] = currentTemp;
       doc["hum"] = humidity;
       doc["water"] = waterLevel;
+      doc["pump"] = pumpStatus;
+      doc["fan"] = fanSpeed;
+      
       String output;
       serializeJson(doc, output);
       pTelemetryCharacteristic->setValue(output.c_str());

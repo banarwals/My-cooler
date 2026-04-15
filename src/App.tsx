@@ -1123,11 +1123,20 @@ export default function App() {
         try {
           const data = JSON.parse(value);
           // Map short keys from ESP to full keys in App
-          setTelemetry({
-            currentTemp: data.temp || telemetry.currentTemp,
-            humidity: data.hum || telemetry.humidity,
-            waterLevel: data.water || telemetry.waterLevel
-          });
+          setTelemetry(prev => ({
+            currentTemp: data.temp !== undefined ? data.temp : prev.currentTemp,
+            humidity: data.hum !== undefined ? data.hum : prev.humidity,
+            waterLevel: data.water !== undefined ? data.water : prev.waterLevel
+          }));
+
+          // Sync settings state if device reports a change (e.g. Auto-Fill)
+          if (data.pump !== undefined || data.fan !== undefined) {
+            setSettings(prev => ({
+              ...prev,
+              pumpStatus: data.pump !== undefined ? data.pump : prev.pumpStatus,
+              fanSpeed: data.fan !== undefined ? data.fan : prev.fanSpeed
+            }));
+          }
         } catch (e) {
           console.error("Failed to parse telemetry", e);
         }
