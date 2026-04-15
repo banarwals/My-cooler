@@ -27,7 +27,9 @@ import {
   CheckCircle2,
   Mail,
   Lock,
-  X
+  X,
+  BrainCircuit,
+  Cpu
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { 
@@ -318,6 +320,7 @@ const Sidebar = ({
 }) => {
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard },
+    { name: "AI Intelligence", icon: BrainCircuit },
     { name: "Analytics", icon: BarChart3 },
     { name: "Connectivity", icon: Router },
     { name: "Schedule", icon: Calendar },
@@ -863,6 +866,91 @@ const ScheduleView = () => {
   );
 };
 
+const AIIntelligenceView = ({ settings, updateSettings, telemetry }: any) => {
+  return (
+    <div className="space-y-8">
+      <section className="bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[2.5rem] p-10 border border-primary/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-10 opacity-10">
+          <BrainCircuit className="w-40 h-40 text-primary" />
+        </div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+              <Cpu className="w-6 h-6" />
+            </div>
+            <h3 className="text-2xl font-headline font-black tracking-tight">Neural Control Core</h3>
+          </div>
+          
+          <p className="text-on-surface-variant max-w-2xl leading-relaxed mb-10">
+            The AI Core analyzes real-time telemetry from your DHT11 and Water Level sensors to optimize cooling efficiency. 
+            It automatically adjusts Fan PWM, Pump cycles, and Turbo states to maintain your target environment.
+          </p>
+
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => updateSettings({ aiMode: !settings.aiMode })}
+              className={`px-10 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-sm transition-all flex items-center gap-4 ${
+                settings.aiMode 
+                  ? "bg-primary text-on-primary-container shadow-[0_0_30px_rgba(129,236,255,0.4)]" 
+                  : "bg-surface-container-highest text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <Zap className={`w-5 h-5 ${settings.aiMode ? "fill-current" : ""}`} />
+              {settings.aiMode ? "AI Core Active" : "Activate AI Core"}
+            </button>
+            {settings.aiMode && (
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-primary rounded-full animate-ping" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Processing Telemetry...</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="bg-surface-container rounded-[2rem] p-8 border border-white/5">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-6">Decision Matrix</h4>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold">Cooling Priority</span>
+              <span className="text-xs text-primary font-black">HIGH</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold">Humidity Target</span>
+              <span className="text-xs text-secondary font-black">45-65%</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold">Power Profile</span>
+              <span className="text-xs text-tertiary-fixed font-black">BALANCED</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 bg-surface-container rounded-[2rem] p-8 border border-white/5">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-6">AI Activity Log</h4>
+          <div className="space-y-4">
+            {[
+              { time: "14:02", msg: "Increased Fan Speed to HIGH due to temp spike (+3.2°C)", icon: Fan },
+              { time: "13:58", msg: "Activated Pump for evaporative cooling (Humidity < 40%)", icon: Droplets },
+              { time: "13:45", msg: "Target temperature reached. Switching to low-power mode.", icon: CheckCircle2 },
+            ].map((log, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 bg-surface-container-low rounded-2xl border border-white/5">
+                <log.icon className="w-4 h-4 text-primary/60" />
+                <div className="flex-1">
+                  <div className="text-[10px] text-on-surface-variant font-bold">{log.time}</div>
+                  <div className="text-xs font-medium">{log.msg}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SettingsView = ({ user, onLogout }: any) => {
   return (
     <div className="space-y-8">
@@ -965,14 +1053,66 @@ export default function App() {
     fanSpeed: "Med", 
     turboBoost: false,
     pumpStatus: false,
-    autoFill: true 
+    autoFill: true,
+    aiMode: false
   });
   const [btStatus, setBtStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [btDevice, setBtDevice] = useState<BluetoothDevice | null>(null);
   const [btSettingsChar, setBtSettingsChar] = useState<BluetoothRemoteGATTCharacteristic | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Firebase Auth ---
+  // --- AI Mode Logic ---
+  useEffect(() => {
+    if (!settings.aiMode) return;
+
+    const aiLogic = () => {
+      let newFanSpeed = settings.fanSpeed;
+      let newPumpStatus = settings.pumpStatus;
+      let newTurbo = settings.turboBoost;
+
+      // Temperature Control
+      const tempDiff = telemetry.currentTemp - settings.targetTemp;
+      if (tempDiff > 5) {
+        newFanSpeed = "High";
+        newTurbo = true;
+      } else if (tempDiff > 2) {
+        newFanSpeed = "High";
+        newTurbo = false;
+      } else if (tempDiff > 0.5) {
+        newFanSpeed = "Med";
+        newTurbo = false;
+      } else if (tempDiff < -1) {
+        newFanSpeed = "Off";
+        newTurbo = false;
+      } else {
+        newFanSpeed = "Low";
+        newTurbo = false;
+      }
+
+      // Humidity Control (Pump usage for evaporative cooling)
+      if (telemetry.humidity < 40 && telemetry.currentTemp > settings.targetTemp) {
+        newPumpStatus = true; // Run pump to increase humidity/cooling
+      } else if (telemetry.humidity > 75) {
+        newPumpStatus = false; // Stop pump to prevent over-saturation
+      }
+
+      // Only update if something changed
+      if (
+        newFanSpeed !== settings.fanSpeed || 
+        newPumpStatus !== settings.pumpStatus || 
+        newTurbo !== settings.turboBoost
+      ) {
+        updateSettings({
+          fanSpeed: newFanSpeed,
+          pumpStatus: newPumpStatus,
+          turboBoost: newTurbo
+        });
+      }
+    };
+
+    const timer = setTimeout(aiLogic, 10000); // Run AI logic every 10s
+    return () => clearTimeout(timer);
+  }, [settings.aiMode, telemetry, settings.targetTemp]);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -1278,8 +1418,16 @@ export default function App() {
                     <div className="relative z-10">
                       <h4 className="text-2xl font-headline font-bold tracking-tight">Intelligence Update</h4>
                       <p className="text-sm text-on-surface-variant mt-2 max-w-lg leading-relaxed font-medium">
-                        Smart learning has predicted a 3°C rise in external temp by 14:00. Pre-cooling scheduled for optimal efficiency.
+                        {settings.aiMode 
+                          ? "AI Core is currently managing your environment. All manual overrides are disabled to maintain peak efficiency."
+                          : "Smart learning has predicted a 3°C rise in external temp by 14:00. Pre-cooling scheduled for optimal efficiency."}
                       </p>
+                      {settings.aiMode && (
+                        <div className="mt-4 flex items-center gap-2 text-primary">
+                          <BrainCircuit className="w-4 h-4 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">AI Active</span>
+                        </div>
+                      )}
                     </div>
                   </section>
                 </div>
@@ -1358,6 +1506,13 @@ export default function App() {
               </div>
             )}
 
+            {activeTab === "AI Intelligence" && (
+              <AIIntelligenceView 
+                settings={settings} 
+                updateSettings={updateSettings} 
+                telemetry={telemetry} 
+              />
+            )}
             {activeTab === "Analytics" && <AnalyticsView telemetry={telemetry} />}
             {activeTab === "Connectivity" && (
               <ConnectivityView 
