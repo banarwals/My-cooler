@@ -937,6 +937,16 @@ const SettingsView = ({ user, onLogout }: any) => {
             </select>
           </div>
         </div>
+        
+        <div className="mt-8 pt-8 border-t border-white/5">
+          <button 
+            onClick={() => onLogout()}
+            className="w-full bg-surface-container-high hover:bg-surface-container-highest py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-white/5 group"
+          >
+            <LogOut className="w-5 h-5 text-error group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold uppercase tracking-widest text-error">Sign Out of System</span>
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -1024,6 +1034,9 @@ export default function App() {
     const unsubSettings = onSnapshot(doc(db, "devices", deviceId, "settings", "current"), (snap) => {
       if (snap.exists()) {
         setSettings(snap.data() as any);
+      } else {
+        // Initialize settings if they don't exist
+        updateSettings(settings);
       }
     }, (err) => handleFirestoreError(err, OperationType.GET, `devices/${deviceId}/settings/current`));
 

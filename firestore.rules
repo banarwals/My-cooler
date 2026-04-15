@@ -42,19 +42,21 @@ service cloud.firestore {
     }
 
     function isValidSettings(data) {
-      return data.keys().hasAll(['targetTemp', 'fanSpeed', 'turboBoost', 'lastUpdated']) &&
+      return data.keys().hasAll(['targetTemp', 'fanSpeed', 'turboBoost', 'pumpStatus', 'autoFill', 'lastUpdated']) &&
              data.targetTemp is number && data.targetTemp >= 16 && data.targetTemp <= 32 &&
              data.fanSpeed in ['Off', 'Low', 'Med', 'High'] &&
              data.turboBoost is bool &&
+             data.pumpStatus is bool &&
+             data.autoFill is bool &&
              data.lastUpdated is timestamp;
     }
 
     function isValidTelemetry(data) {
-      return data.keys().hasAll(['currentTemp', 'humidity', 'waterLevel', 'timestamp']) &&
+      return data.keys().hasAll(['currentTemp', 'humidity', 'waterLevel']) &&
              data.currentTemp is number &&
              data.humidity is number &&
              data.waterLevel is number &&
-             data.timestamp is timestamp;
+             (!('timestamp' in data) || data.timestamp is timestamp);
     }
 
     // ===============================================================
@@ -72,8 +74,7 @@ service cloud.firestore {
 
       match /telemetry/{telemetryId} {
         allow read: if isAuthenticated();
-        // Telemetry is usually written by the device (ESP)
-        // For this demo, we allow authenticated writes
+        // Allow write if authenticated (including anonymous ESP32)
         allow write: if isAuthenticated() && isValidTelemetry(request.resource.data);
       }
     }

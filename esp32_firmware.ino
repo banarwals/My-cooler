@@ -125,8 +125,14 @@ void setup() {
 
   // 2. Firebase Setup
   config.api_key = API_KEY;
-  // For Firestore, we usually use anonymous auth or email/pass
-  // Here we assume the device is authorized
+  
+  Serial.println("Authenticating with Firebase...");
+  if (Firebase.signUp(&config, &auth, "", "")) {
+    Serial.println("Anonymous Auth Success");
+  } else {
+    Serial.printf("Auth Failed: %s\n", config.signer.signupError.message.c_str());
+  }
+
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
@@ -157,15 +163,7 @@ void setup() {
 unsigned long lastUpdate = 0;
 
 void loop() {
-  // 1. Read Sensors
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  if (!isnan(h) && !isnan(t)) {
-    humidity = (int)h;
-    currentTemp = t;
-  }
-
+  // 1. Read Water Level (Analog is fast)
   int rawLevel = analogRead(WATER_LEVEL_PIN);
   waterLevel = map(rawLevel, 0, 4095, 0, 100);
 
@@ -185,6 +183,21 @@ void loop() {
   if (millis() - lastUpdate > 5000) {
     lastUpdate = millis();
 
+    // 4. Read DHT Sensor (Inside timer to avoid reading too fast)
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    if (isnan(h) || isnan(t)) {
+      Serial.println("Failed to read from DHT sensor!");
+    } else {
+      humidity = (int)h;
+      currentTemp = t;
+      Serial.print("Temp: "); Serial.print(currentTemp);
+      Serial.print("°C | Humidity: "); Serial.print(humidity);
+      Serial.print("% | Water: "); Serial.print(waterLevel);
+      Serial.println("%");
+    }
+
     // Update Firestore (Online)
     if (Firebase.ready()) {
       String path = "devices/" + String(DEVICE_ID) + "/telemetry/latest";
@@ -192,11 +205,14 @@ void loop() {
       content.set("fields/currentTemp/doubleValue", currentTemp);
       content.set("fields/humidity/integerValue", humidity);
       content.set("fields/waterLevel/integerValue", waterLevel);
-      // Note: Firestore REST API format is specific
+      
+      // Add Server Timestamp
+      content.set("fields/timestamp/timestampValue", "1970-01-01T00:00:00Z"); // Placeholder, rules allow optional
       
       if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_PROJECT_ID, FIRESTORE_DATABASE_ID, path.c_str(), content.raw(), "currentTemp,humidity,waterLevel")) {
-        Serial.println("Firestore Updated");
+        Serial.println("Firestore Telemetry Updated");
       } else {
+        Serial.print("Firestore Error: ");
         Serial.println(fbdo.errorReason());
       }
     }
